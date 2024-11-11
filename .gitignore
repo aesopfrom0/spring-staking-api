@@ -48,3 +48,7 @@ logs
 ### Environment ###
 .env
 .env.local
+
+### Configuration ###
+**/application-*.yml
+!**/application-*.yml.example
