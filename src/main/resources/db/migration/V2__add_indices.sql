@@ -1,0 +1,4 @@
+CREATE INDEX idx_daily_reward_summaries_date ON daily_reward_summaries(distribution_date);
+CREATE INDEX idx_balance_snapshots_batch ON balance_snapshots(batch_id);
+CREATE INDEX idx_reward_distributions_status ON reward_distributions(status);
+CREATE INDEX idx_onchain_transactions_status ON onchain_transactions(status);
