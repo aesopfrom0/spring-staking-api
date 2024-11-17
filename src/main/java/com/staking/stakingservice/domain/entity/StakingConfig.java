@@ -3,8 +3,12 @@ package com.staking.stakingservice.domain.entity;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+import com.staking.stakingservice.domain.enums.ClaimType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -46,6 +50,10 @@ public class StakingConfig {
 
     @Column(name = "unbonding_period", nullable = false)
     private Integer unbondingPeriod;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "claim_type", nullable = false, length = 20)
+    private ClaimType claimType = ClaimType.INSTANT;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

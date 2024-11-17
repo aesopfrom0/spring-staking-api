@@ -3,9 +3,10 @@ package com.staking.stakingservice.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import com.staking.stakingservice.controller.request.BalanceSnapshotRequest;
+import com.staking.stakingservice.controller.response.BalanceSnapshotResponse;
 import com.staking.stakingservice.service.BalanceSnapshotService;
-import com.staking.stakingservice.service.dto.request.BalanceSnapshotRequest;
-import com.staking.stakingservice.service.dto.response.BalanceSnapshotResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

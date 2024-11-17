@@ -4,10 +4,10 @@ CREATE TABLE accounts (
     username VARCHAR(50) NOT NULL,
     is_staking_terms_agreed BOOLEAN NOT NULL DEFAULT false,
     -- 본 프로젝트에서는 약관 동의 이력 관리를 생략하고 accounts 테이블에서만 현재 상태를 관리합니다.
-    staking_terms_agreed_at TIMESTAMP,
-    staking_terms_withdrawn_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    staking_terms_agreed_at TIMESTAMPTZ,
+    staking_terms_withdrawn_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(username)
 );
 
@@ -17,9 +17,9 @@ CREATE TABLE account_reward_info (
     account_id BIGINT NOT NULL REFERENCES accounts(id),
     coin_symbol VARCHAR(20) NOT NULL, -- coin 정보는 편의상 정규화 생략
     total_reward_amount DECIMAL(30,8) NOT NULL DEFAULT 0,
-    last_reward_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_reward_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(account_id, coin_symbol)
 );
 
@@ -30,7 +30,7 @@ CREATE TABLE balance_snapshots (
     coin_symbol VARCHAR(20) NOT NULL,  -- coin 정보는 편의상 정규화 생략
     snapshot_balance DECIMAL(30,8) NOT NULL,
     batch_id INTEGER NOT NULL,  -- YYYYMMDD 형식
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(account_id, coin_symbol, batch_id)
 );
 
@@ -41,8 +41,8 @@ CREATE TABLE daily_balance_summaries (
     batch_id INTEGER NOT NULL,  -- YYYYMMDD 형식
     total_snapshot_balance DECIMAL(30,8) NOT NULL,
     account_count INTEGER NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(coin_symbol, batch_id)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(coin_symbol, batch_id) -- 실제로는 스냅샷이 1일 2회 이상일 수 있으나 이 프로젝트에서는 일 1회로 제한
 );
 
 -- 코인별 스테이킹 설정
@@ -56,8 +56,9 @@ CREATE TABLE staking_configs (
     current_total_staked DECIMAL(30,8) NOT NULL DEFAULT 0,  -- 현재 총 스테이킹된 금액
     enabled BOOLEAN NOT NULL DEFAULT true,
     unbonding_period INTEGER NOT NULL,            -- 언본딩 기간(일)
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    claim_type VARCHAR(20) NOT NULL,              -- 리워드 회수 타입
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(coin_symbol)
 );
 
@@ -72,8 +73,8 @@ CREATE TABLE onchain_transactions (
     status VARCHAR(20) NOT NULL,               -- PENDING/SUCCESS/FAILED
     tx_hash VARCHAR(100),                      -- 트랜잭션 해시
     tx_detail JSONB,                           -- 가스 정보 등 상세 내역 (tx 자체 저장)
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP                     -- 트랜잭션 완료 시점
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMPTZ                   -- 트랜잭션 완료 시점
 );
 
 -- 일일 보상 배치 작업 요약
@@ -81,7 +82,7 @@ CREATE TABLE daily_reward_summaries (
     id BIGSERIAL PRIMARY KEY,
     coin_symbol VARCHAR(20) NOT NULL,
     batch_id INTEGER NOT NULL,                       -- YYYYMMDD 형식
-    distribution_date DATE NOT NULL,                 -- 보상 기준일
+    distribution_date Date,                          -- 분배 실행일
     status VARCHAR(20) NOT NULL,                     -- PENDING/CALCULATING/CALCULATED/DISTRIBUTING/COMPLETED/FAILED
     is_claimed BOOLEAN NOT NULL DEFAULT false,       -- 실제 리워드 회수 여부
     claim_type VARCHAR(20) NOT NULL DEFAULT 'INSTANT', -- INSTANT/DEFERRED 즉시/후불 회수 타입
@@ -96,15 +97,15 @@ CREATE TABLE daily_reward_summaries (
     total_snapshot_balance DECIMAL(30,8),             -- 스냅샷 시점 총 잔고
     daily_reward_rate DECIMAL(10,8),                  -- 실제 계산된 일일 보상률
     account_count INTEGER,                            -- 대상 계정 수
-    calculated_at TIMESTAMP,                          -- 계산 완료 시점
+    calculated_at TIMESTAMPTZ,                        -- 계산 완료 시점
 
     -- 3. 실제 분배
     total_reward_distributed DECIMAL(30,8),           -- 실제 분배된 보상
     dust_amount DECIMAL(30,18),                       -- 먼지 수량 (calculated - distributed)
 
     error_message TEXT,                               -- 실패 시 에러 메시지
-    completed_at TIMESTAMP,                           -- 최종 완료 시점
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMPTZ,                         -- 최종 완료 시점
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(coin_symbol, batch_id)
 );
 
@@ -121,10 +122,29 @@ CREATE TABLE reward_distributions (
 
     status VARCHAR(20) NOT NULL,                -- PENDING/DISTRIBUTED/FAILED
     batch_id INTEGER NOT NULL,                  -- summary의 batch_id와 동일
-    distributed_at TIMESTAMP,
+    distributed_at TIMESTAMPTZ,
     failed_reason TEXT,
 
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(account_id, coin_symbol, batch_id)
+);
+
+-- 대표 지갑 일별 잔고 스냅샷
+CREATE TABLE delegator_balance_snapshots (
+    id BIGSERIAL PRIMARY KEY,
+    coin_symbol VARCHAR(20) NOT NULL,
+    wallet_address VARCHAR(100) NOT NULL,      -- 대표 지갑 주소
+    
+    -- 잔고 정보
+    total_balance DECIMAL(30,8) NOT NULL,      -- 전체 잔고
+    staking_balance DECIMAL(30,8),             -- 스테이킹 중인 잔고 (optional)
+    reward_balance DECIMAL(30,8),              -- 미청구 리워드 잔고 (optional)
+    liquid_balance DECIMAL(30,8),              -- 출금 가능한 잔고 (optional)
+    
+    -- 메타데이터
+    chain_metadata JSONB,                      -- 체인별 추가 정보 (flexible)
+    batch_id INTEGER NOT NULL,                 -- YYYYMMDD 형식
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(coin_symbol, wallet_address, batch_id) -- 실제로는 스냅샷이 1일 2회 이상일 수 있으나 이 프로젝트에서는 일 1회로 제한
 );

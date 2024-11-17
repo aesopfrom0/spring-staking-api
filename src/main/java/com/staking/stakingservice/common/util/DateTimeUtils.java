@@ -2,6 +2,7 @@ package com.staking.stakingservice.common.util;
 
 import lombok.experimental.UtilityClass;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -37,5 +38,13 @@ public class DateTimeUtils {
         return DateTimeFormatter.ofPattern(format)
                 .withZone(UTC_ZONE)
                 .parse(dateTimeStr, Instant::from);
+    }
+
+    public static Instant getBatchDate(Integer batchId) {
+        return LocalDate.parse(
+                String.valueOf(batchId),
+                DateTimeFormatter.ofPattern(BATCH_ID_FORMAT))
+                .atStartOfDay()
+                .toInstant(UTC_ZONE);
     }
 }

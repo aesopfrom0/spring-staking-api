@@ -1,13 +1,13 @@
-package com.staking.stakingservice.service.dto.response;
+package com.staking.stakingservice.controller.response;
 
 import java.math.BigDecimal;
 import java.util.List;
 
-import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 
 @Getter
-@AllArgsConstructor
+@Builder
 public class BalanceSnapshotResponse {
     private Integer batchId;
     private int totalAccounts;
@@ -15,7 +15,7 @@ public class BalanceSnapshotResponse {
     private List<CoinSummary> summaries;
 
     @Getter
-    @AllArgsConstructor
+    @Builder
     public static class CoinSummary {
         private String coinSymbol;
         private BigDecimal totalBalance;

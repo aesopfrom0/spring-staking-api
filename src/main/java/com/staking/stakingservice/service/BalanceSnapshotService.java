@@ -11,14 +11,14 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.staking.stakingservice.common.util.DateTimeUtils;
+import com.staking.stakingservice.controller.request.BalanceSnapshotRequest;
+import com.staking.stakingservice.controller.response.BalanceSnapshotResponse;
+import com.staking.stakingservice.controller.response.BalanceSnapshotResponse.CoinSummary;
 import com.staking.stakingservice.domain.entity.Account;
 import com.staking.stakingservice.domain.entity.BalanceSnapshot;
 import com.staking.stakingservice.domain.entity.DailyBalanceSummary;
 import com.staking.stakingservice.domain.repository.BalanceSnapshotRepository;
 import com.staking.stakingservice.domain.repository.DailyBalanceSummaryRepository;
-import com.staking.stakingservice.service.dto.request.BalanceSnapshotRequest;
-import com.staking.stakingservice.service.dto.response.BalanceSnapshotResponse;
-import com.staking.stakingservice.service.dto.response.BalanceSnapshotResponse.CoinSummary;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +43,7 @@ public class BalanceSnapshotService {
         // 스냅샷 생성
         for (BalanceSnapshotRequest request : requests) {
             try {
-                Account account = accountService.findStakingEnabledAccountById(request.getAccountId());
+                Account account = accountService.findAccountById(request.getAccountId());
 
                 BalanceSnapshot snapshot = new BalanceSnapshot(
                         account,
@@ -66,29 +66,31 @@ public class BalanceSnapshotService {
                 .findByBatchId(finalBatchId);
 
         List<CoinSummary> coinSummaries = summaries.stream()
-                .map(s -> new CoinSummary(
-                        s.getCoinSymbol(),
-                        s.getTotalSnapshotBalance(),
-                        s.getAccountCount()))
+                .map(s -> BalanceSnapshotResponse.CoinSummary.builder()
+                        .coinSymbol(s.getCoinSymbol())
+                        .totalBalance(s.getTotalSnapshotBalance())
+                        .accountCount(s.getAccountCount())
+                        .build())
                 .collect(Collectors.toList());
 
         log.info("배치 {}에 대해 {}개의 스냅샷과 요약 데이터 생성 완료",
                 finalBatchId, requests.size());
 
-        return new BalanceSnapshotResponse(
-                finalBatchId,
-                (int) requests.stream().map(BalanceSnapshotRequest::getAccountId).distinct().count(),
-                requests.size(),
-                coinSummaries);
+        return BalanceSnapshotResponse.builder()
+                .batchId(finalBatchId)
+                .totalAccounts((int) requests.stream().map(BalanceSnapshotRequest::getAccountId).distinct().count())
+                .totalSnapshots(requests.size())
+                .summaries(coinSummaries)
+                .build();
     }
 
     @Transactional
     public BalanceSnapshotResponse createRandomSnapshots(Integer batchId) {
         Integer finalBatchId = (batchId != null) ? batchId : DateTimeUtils.generateBatchId();
-        List<Account> stakingAccounts = accountService.findStakingEnabledAccounts();
+        List<Account> allAccounts = accountService.findAllAccounts();
         List<BalanceSnapshotRequest> requests = new ArrayList<>();
 
-        for (Account account : stakingAccounts) {
+        for (Account account : allAccounts) {
             for (String coinSymbol : COIN_SYMBOLS) {
                 // TODO: 실제 구현 시에는 account_balance 테이블과 JOIN하여 실시간 잔고 조회 필요
                 // 현재는 테스트를 위해 각 코인의 특성을 고려한 임의의 잔고 범위 설정
@@ -100,7 +102,11 @@ public class BalanceSnapshotService {
                     default -> BigDecimal.ZERO;
                 };
 
-                requests.add(new BalanceSnapshotRequest(account.getId(), coinSymbol, balance));
+                requests.add(BalanceSnapshotRequest.builder()
+                        .accountId(account.getId())
+                        .coinSymbol(coinSymbol)
+                        .balance(balance)
+                        .build());
             }
         }
 

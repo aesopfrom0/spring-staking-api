@@ -37,7 +37,7 @@ public class DailyRewardSummary {
     @Column(name = "batch_id", nullable = false)
     private Integer batchId;
 
-    @Column(name = "distribution_date", nullable = false)
+    @Column(name = "distribution_date", nullable = true)
     private LocalDate distributionDate;
 
     @Enumerated(EnumType.STRING)
