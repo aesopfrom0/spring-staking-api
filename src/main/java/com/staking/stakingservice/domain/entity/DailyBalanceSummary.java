@@ -16,7 +16,6 @@ import lombok.Setter;
 @Entity
 @Table(name = "daily_balance_summaries")
 @Getter
-@Setter
 public class DailyBalanceSummary {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,5 +39,13 @@ public class DailyBalanceSummary {
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();
+    }
+
+    public DailyBalanceSummary(String coinSymbol, Integer batchId, BigDecimal totalSnapshotBalance,
+            Integer accountCount) {
+        this.coinSymbol = coinSymbol;
+        this.batchId = batchId;
+        this.totalSnapshotBalance = totalSnapshotBalance;
+        this.accountCount = accountCount;
     }
 }

@@ -11,14 +11,12 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
-import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
 @Table(name = "balance_snapshots")
 @Getter
-@Setter
 public class BalanceSnapshot {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,5 +41,12 @@ public class BalanceSnapshot {
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();
+    }
+
+    public BalanceSnapshot(Account account, String coinSymbol, BigDecimal snapshotBalance, Integer batchId) {
+        this.account = account;
+        this.coinSymbol = coinSymbol;
+        this.snapshotBalance = snapshotBalance;
+        this.batchId = batchId;
     }
 }
