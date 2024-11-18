@@ -11,12 +11,15 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
 @Table(name = "balance_snapshots")
 @Getter
+@NoArgsConstructor
 public class BalanceSnapshot {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

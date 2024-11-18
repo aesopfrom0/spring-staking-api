@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.staking.stakingservice.controller.request.RewardConfirmationRequest;
 import com.staking.stakingservice.controller.response.RewardConfirmationResponse;
 import com.staking.stakingservice.domain.entity.DailyRewardSummary;
+import com.staking.stakingservice.service.RewardCalculationService;
 import com.staking.stakingservice.service.RewardConfirmationService;
 
 import jakarta.validation.Valid;
@@ -23,6 +24,8 @@ public class RewardController {
 
     private final RewardConfirmationService rewardConfirmationService;
 
+    private final RewardCalculationService rewardCalculationService;
+
     @PostMapping("/confirm")
     public ResponseEntity<RewardConfirmationResponse> confirmReward(
             @Valid @RequestBody RewardConfirmationRequest request) {
@@ -33,6 +36,19 @@ public class RewardController {
                 request.getCoinSymbol(),
                 request.getBatchId(),
                 request.getDelegatorAddress());
+
+        return ResponseEntity.ok(RewardConfirmationResponse.from(summary));
+    }
+
+    @PostMapping("/calculate")
+    public ResponseEntity<RewardConfirmationResponse> calculateReward(
+            @Valid @RequestBody RewardConfirmationRequest request) {
+
+        log.info("리워드 계산 요청: {}", request);
+
+        DailyRewardSummary summary = rewardCalculationService.calculateRewards(
+                request.getCoinSymbol(),
+                request.getBatchId());
 
         return ResponseEntity.ok(RewardConfirmationResponse.from(summary));
     }

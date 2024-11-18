@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BalanceSnapshotRepository extends JpaRepository<BalanceSnapshot, Long> {
     List<BalanceSnapshot> findByBatchId(Integer batchId);
+
+    List<BalanceSnapshot> findAllByCoinSymbolAndBatchId(String coinSymbol, Integer batchId);
 }
